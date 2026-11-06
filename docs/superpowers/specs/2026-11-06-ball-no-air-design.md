@@ -81,7 +81,10 @@ the kind that can take extra forces later.
 - Side panel: time, x, y, vx, vy, speed, max height, range.
 - Pause/play on the space bar. Step forward one interval on the right arrow key.
   Auto-pause every interval is a setting at the top of the file (on by default).
-- Each pause leaves a small grey ghost circle on the path with its time underneath.
+- Every pause leaves a small grey ghost circle on the path with its time underneath:
+  a space-bar pause, an auto-pause, and a step forward all leave one. (Student's
+  decision, 2026-11-06. The mockup originally skipped the space-bar case; it has been
+  fixed to match.)
 
 ### Builder's calls (my choices, not the student's — flag if you disagree)
 

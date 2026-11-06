@@ -183,7 +183,11 @@
   function togglePause() {
     if (!sim) return;
     paused = !paused; setPauseLabel();
-    if (!paused) { sim.last = null; if (sim.t >= sim.tf) return; raf = requestAnimationFrame(frame); }
+    if (paused) {
+      // leave a ghost marker at the spot where the space bar was pressed
+      const t = sim.t, x = sim.vx * t, y = sim.h0 + sim.vy0 * t - 0.5 * sim.g * t * t;
+      if (t < sim.tf) { sim.marks.push([x, y, t]); render(); }
+    } else { sim.last = null; if (sim.t >= sim.tf) return; raf = requestAnimationFrame(frame); }
   }
 
   function draw(x, y, vy, sp, t) {
