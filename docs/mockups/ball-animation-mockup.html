@@ -1,0 +1,244 @@
+<title>Ball Launch Mockup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+  /* Layout: a lab-notebook page. Settings strip on top, the animation canvas as the main plate,
+     a readout table beside it. Numbers in mono so they line up as they change. */
+  :root {
+    --bg: #f6f4ee;
+    --paper: #fffdf8;
+    --fg: #1f2328;
+    --muted: #6b6f76;
+    --rule: #d9d4c7;
+    --accent: #0b6e8e;      /* ball + horizontal velocity */
+    --accent2: #c2491d;     /* vertical velocity */
+    --speed: #4a3e8a;       /* total speed */
+    --display: "Fraunces", Georgia, serif;
+    --body: "IBM Plex Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181c; --paper: #1d2126; --fg: #e8e6df; --muted: #9a9ea6; --rule: #343a42;
+      --accent: #5bc0e0; --accent2: #f08a5d; --speed: #a99be8; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181c; --paper: #1d2126; --fg: #e8e6df; --muted: #9a9ea6; --rule: #343a42;
+    --accent: #5bc0e0; --accent2: #f08a5d; --speed: #a99be8; color-scheme: dark;
+  }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--body);
+    padding-block: 28px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 20px; }
+  h1 { font-family: var(--display); font-size: 1.9rem; margin: 0; text-wrap: balance; }
+  .sub { color: var(--muted); margin: 4px 0 0; max-width: 65ch; }
+  .note { font-size: .85rem; color: var(--muted); border-left: 3px solid var(--accent2); padding-left: 10px; }
+
+  .settings { display: flex; flex-wrap: wrap; gap: 12px 24px; padding: 12px 16px;
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; }
+  .settings label { display: grid; gap: 2px; font-size: .78rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .06em; }
+  .settings input { font-family: var(--mono); font-size: 1rem; width: 7ch; padding: 4px 6px;
+    border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
+  .settings button { align-self: end; font-family: var(--body); font-weight: 500; padding: 7px 14px;
+    border-radius: 4px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  .settings button:focus-visible, .settings input:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+  .settings button.ghost { background: transparent; color: var(--accent); }
+  .settings .chk { grid-template-columns: auto 1fr; align-items: center; align-self: end; text-transform: none;
+    letter-spacing: 0; font-size: .9rem; color: var(--fg); display: flex; gap: 6px; padding-bottom: 6px; }
+  .settings .chk input { width: auto; }
+  .paused-badge { font-family: var(--mono); font-size: .8rem; color: var(--accent2); }
+
+  .plate { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 16px; }
+  @media (max-width: 760px) { .plate { grid-template-columns: 1fr; } }
+  canvas { width: 100%; max-width: 100%; aspect-ratio: 16 / 10; display: block;
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; }
+
+  .readout { background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px;
+    display: grid; gap: 10px; align-content: start; font-variant-numeric: tabular-nums; }
+  .readout .t { font-family: var(--mono); font-size: 1.6rem; font-weight: 600; }
+  .row { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: baseline;
+    border-top: 1px solid var(--rule); padding-top: 8px; }
+  .row .k { font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .row .v { font-family: var(--mono); font-size: 1.05rem; text-align: right; }
+  .vx { color: var(--accent); } .vy { color: var(--accent2); } .sp { color: var(--speed); }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+</style>
+
+<div class="wrap">
+  <div>
+    <h1>Ball launch, no air</h1>
+    <p class="sub">Mockup of the animation window. The ball flies, and the numbers next to it update every frame. Change a setting and press Launch to see how the path changes.</p>
+  </div>
+
+  <div class="settings">
+    <label>Speed (m/s)<input id="v0" type="number" value="20" step="1"></label>
+    <label>Angle (°)<input id="ang" type="number" value="45" step="5"></label>
+    <label>Gravity (m/s²)<input id="g" type="number" value="9.8" step="0.1"></label>
+    <label>Start height (m)<input id="h0" type="number" value="0" step="1"></label>
+    <button id="go" type="button">Launch</button>
+  </div>
+
+  <div class="settings playback">
+    <button id="pause" type="button" class="ghost">Pause</button>
+    <label>Step size (s)<input id="dtstep" type="number" value="0.5" step="0.1" min="0.05"></label>
+    <button id="step" type="button" class="ghost">Step forward</button>
+    <label class="chk"><input id="autostop" type="checkbox" checked> Auto-pause every step</label>
+  </div>
+
+  <div class="plate">
+    <canvas id="c" width="1200" height="750"></canvas>
+    <aside class="readout">
+      <div class="row" style="border-top:0;padding-top:0"><span class="k">time</span><span class="v t" id="rt">0.00 s</span></div>
+      <div class="row"><span class="k">x position</span><span class="v" id="rx">0.0 m</span></div>
+      <div class="row"><span class="k">y position</span><span class="v" id="ry">0.0 m</span></div>
+      <div class="row"><span class="k vx">vx (sideways)</span><span class="v vx" id="rvx">14.1 m/s</span></div>
+      <div class="row"><span class="k vy">vy (up/down)</span><span class="v vy" id="rvy">14.1 m/s</span></div>
+      <div class="row"><span class="k sp">speed</span><span class="v sp" id="rsp">20.0 m/s</span></div>
+      <div class="row"><span class="k">max height</span><span class="v" id="rmax">— m</span></div>
+      <div class="row"><span class="k">range</span><span class="v" id="rrng">— m</span></div>
+    </aside>
+  </div>
+
+  <p class="note">The real thing will be Python with matplotlib. This page is just to agree on what goes on screen: ball, trail, the vx / vy / speed labels riding along with the ball, the clock, and pausing. Space bar also pauses. Each pause leaves a grey ghost circle with its time so you can compare moments.</p>
+</div>
+
+<script>
+(function () {
+  const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height, PAD = 70;
+  const el = id => document.getElementById(id);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  let sim = null, raf = null, paused = false, stopAt = null;
+
+  function setup() {
+    const v0 = +el('v0').value, a = +el('ang').value * Math.PI / 180, g = +el('g').value, h0 = +el('h0').value;
+    const vx = v0 * Math.cos(a), vy = v0 * Math.sin(a);
+    // Physics: y = h0 + vy t - g t^2 / 2 ; time of flight solves y = 0
+    const tf = (vy + Math.sqrt(vy * vy + 2 * g * h0)) / g;
+    const range = vx * tf, hmax = h0 + vy * vy / (2 * g);
+    sim = { vx, vy0: vy, g, h0, tf, range, hmax, t: 0, trail: [], marks: [], last: null };
+    const xmax = Math.max(range * 1.1, 1), ymax = Math.max(hmax * 1.25, 1);
+    sim.sx = x => PAD + x / xmax * (W - 2 * PAD);
+    sim.sy = y => H - PAD - y / ymax * (H - 2 * PAD);
+    sim.xmax = xmax; sim.ymax = ymax;
+    el('rmax').textContent = hmax.toFixed(1) + ' m';
+    el('rrng').textContent = range.toFixed(1) + ' m';
+    paused = false; setPauseLabel();
+    stopAt = el('autostop').checked ? +el('dtstep').value : null;
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(frame);
+  }
+
+  function setPauseLabel() { el('pause').textContent = paused ? 'Play' : 'Pause'; }
+
+  function render() {
+    const t = sim.t, x = sim.vx * t, y = sim.h0 + sim.vy0 * t - 0.5 * sim.g * t * t;
+    const vy = sim.vy0 - sim.g * t, sp = Math.hypot(sim.vx, vy);
+    draw(x, y, vy, sp, t);
+    el('rt').textContent = t.toFixed(2) + ' s';
+    el('rx').textContent = x.toFixed(1) + ' m'; el('ry').textContent = Math.max(y, 0).toFixed(1) + ' m';
+    el('rvx').textContent = sim.vx.toFixed(1) + ' m/s'; el('rvy').textContent = vy.toFixed(1) + ' m/s';
+    el('rsp').textContent = sp.toFixed(1) + ' m/s';
+  }
+
+  function frame(now) {
+    if (paused) { sim.last = null; return; }
+    if (sim.last == null) sim.last = now;
+    const dt = Math.min((now - sim.last) / 1000, 0.05); sim.last = now;
+    let tNext = Math.min(sim.t + dt * 0.6, sim.tf);  // slowed down so numbers are readable
+    // Auto-pause: stop exactly on the next multiple of the step size
+    if (stopAt != null && tNext >= stopAt - 1e-9) {
+      tNext = Math.min(stopAt, sim.tf); paused = true; setPauseLabel();
+      stopAt += +el('dtstep').value;
+    }
+    sim.t = tNext;
+    const t = sim.t, x = sim.vx * t, y = sim.h0 + sim.vy0 * t - 0.5 * sim.g * t * t;
+    const vy = sim.vy0 - sim.g * t, sp = Math.hypot(sim.vx, vy);
+    sim.trail.push([x, y]);
+    if (paused) sim.marks.push([x, y, t]);
+    render();
+    if (t < sim.tf && !paused) raf = requestAnimationFrame(frame);
+  }
+
+  // Manual step: jump forward by one step size and stay paused
+  function stepForward() {
+    if (!sim) return;
+    paused = true; setPauseLabel();
+    const step = +el('dtstep').value;
+    const target = Math.min(sim.t + step, sim.tf);
+    // fill in the trail between the old time and the new one so the dotted path stays smooth
+    for (let tt = sim.t + 0.02; tt < target; tt += 0.02) sim.trail.push([sim.vx * tt, sim.h0 + sim.vy0 * tt - 0.5 * sim.g * tt * tt]);
+    sim.t = target;
+    const x = sim.vx * sim.t, y = sim.h0 + sim.vy0 * sim.t - 0.5 * sim.g * sim.t * sim.t;
+    sim.trail.push([x, y]); sim.marks.push([x, y, sim.t]);
+    if (stopAt != null) stopAt = sim.t + step;
+    render();
+  }
+
+  function togglePause() {
+    if (!sim) return;
+    paused = !paused; setPauseLabel();
+    if (!paused) { sim.last = null; if (sim.t >= sim.tf) return; raf = requestAnimationFrame(frame); }
+  }
+
+  function draw(x, y, vy, sp, t) {
+    const fg = css('--fg'), mu = css('--muted'), rule = css('--rule'), ac = css('--accent'), ac2 = css('--accent2'), spc = css('--speed');
+    ctx.clearRect(0, 0, W, H);
+    // grid + axes
+    ctx.strokeStyle = rule; ctx.lineWidth = 1; ctx.font = '20px IBM Plex Mono, monospace'; ctx.fillStyle = mu;
+    const stepX = niceStep(sim.xmax), stepY = niceStep(sim.ymax);
+    for (let gx = 0; gx <= sim.xmax; gx += stepX) { const px = sim.sx(gx); ctx.beginPath(); ctx.moveTo(px, PAD); ctx.lineTo(px, H - PAD); ctx.stroke(); ctx.textAlign = 'center'; ctx.fillText(gx.toFixed(0), px, H - PAD + 28); }
+    for (let gy = 0; gy <= sim.ymax; gy += stepY) { const py = sim.sy(gy); ctx.beginPath(); ctx.moveTo(PAD, py); ctx.lineTo(W - PAD, py); ctx.stroke(); ctx.textAlign = 'right'; ctx.fillText(gy.toFixed(0), PAD - 12, py + 7); }
+    ctx.fillStyle = mu; ctx.textAlign = 'center'; ctx.fillText('x (m)', W / 2, H - 18);
+    ctx.save(); ctx.translate(22, H / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('y (m)', 0, 0); ctx.restore();
+    ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PAD, H - PAD); ctx.lineTo(W - PAD, H - PAD); ctx.stroke();
+    // trail
+    ctx.strokeStyle = ac; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath();
+    sim.trail.forEach(([tx, ty], i) => { const px = sim.sx(tx), py = sim.sy(ty); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+    ctx.stroke(); ctx.setLineDash([]);
+    // ghost markers left behind at every pause, with their time, so you can compare moments
+    ctx.font = '18px IBM Plex Mono, monospace';
+    sim.marks.forEach(([mx, my, mt]) => {
+      const qx = sim.sx(mx), qy = sim.sy(my);
+      ctx.strokeStyle = mu; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(qx, qy, 9, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = mu; ctx.textAlign = 'center'; ctx.fillText(mt.toFixed(1) + 's', qx, qy + 30);
+    });
+    // velocity arrows
+    const px = sim.sx(x), py = sim.sy(y), k = 6;
+    arrow(px, py, px + sim.vx * k, py, ac); arrow(px, py, px, py - vy * k, ac2);
+    // ball
+    ctx.fillStyle = ac; ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.fill();
+    // labels riding with the ball
+    ctx.font = '600 22px IBM Plex Mono, monospace'; ctx.textAlign = 'left';
+    const lx = px + 18, flip = lx > W - 260;
+    ctx.textAlign = flip ? 'right' : 'left'; const tx = flip ? px - 18 : lx;
+    ctx.fillStyle = ac;  ctx.fillText('vx ' + sim.vx.toFixed(1), tx, py - 34);
+    ctx.fillStyle = ac2; ctx.fillText('vy ' + (vy >= 0 ? '+' : '') + vy.toFixed(1), tx, py - 8);
+    ctx.fillStyle = spc; ctx.fillText('v  ' + sp.toFixed(1), tx, py + 18);
+    // clock in corner
+    ctx.fillStyle = fg; ctx.font = '600 30px IBM Plex Mono, monospace'; ctx.textAlign = 'right';
+    ctx.fillText('t = ' + t.toFixed(2) + ' s' + (paused && t < sim.tf ? '  ⏸' : ''), W - PAD, PAD - 20);
+  }
+  function arrow(x1, y1, x2, y2, col) {
+    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy); if (L < 4) return;
+    ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    const ux = dx / L, uy = dy / L;
+    ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - 12 * ux + 7 * uy, y2 - 12 * uy - 7 * ux);
+    ctx.lineTo(x2 - 12 * ux - 7 * uy, y2 - 12 * uy + 7 * ux); ctx.closePath(); ctx.fill();
+  }
+  function niceStep(max) { const r = Math.pow(10, Math.floor(Math.log10(max))); const s = max / r; return s < 2 ? r / 5 : s < 5 ? r / 2 : r; }
+
+  el('go').addEventListener('click', setup);
+  el('pause').addEventListener('click', togglePause);
+  el('step').addEventListener('click', stepForward);
+  el('autostop').addEventListener('change', () => { stopAt = el('autostop').checked && sim ? Math.floor(sim.t / +el('dtstep').value + 1) * +el('dtstep').value : null; });
+  document.addEventListener('keydown', e => { if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); togglePause(); } });
+  setup();
+})();
+</script>
