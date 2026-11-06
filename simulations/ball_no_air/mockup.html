@@ -88,6 +88,8 @@
     <label>Step size (s)<input id="dtstep" type="number" value="0.5" step="0.1" min="0.05"></label>
     <button id="step" type="button" class="ghost">Step forward</button>
     <label class="chk"><input id="autostop" type="checkbox" checked> Auto-pause every step</label>
+    <label>Jump to t (s)<input id="jumpt" type="number" value="1.25" step="0.01" min="0"></label>
+    <button id="jump" type="button" class="ghost">Jump</button>
   </div>
 
   <div class="plate">
@@ -104,7 +106,7 @@
     </aside>
   </div>
 
-  <p class="note">The real thing will be Python with matplotlib. This page is just to agree on what goes on screen: ball, trail, the vx / vy / speed labels riding along with the ball, the clock, and pausing. Space bar also pauses. Each pause leaves a grey ghost circle with its time so you can compare moments.</p>
+  <p class="note">The real thing will be Python with matplotlib. This page is just to agree on what goes on screen: ball, trail, the vx / vy / speed labels riding along with the ball, the clock, and pausing. Space bar also pauses. Each pause leaves a grey ghost circle with its time so you can compare moments. Type an exact time in "Jump to t" and press Enter to land precisely on that moment.</p>
 </div>
 
 <script>
@@ -180,6 +182,20 @@
     render();
   }
 
+  // Jump to an exact time, pause there, and leave a ghost marker
+  function jumpTo() {
+    if (!sim) return;
+    const target = Math.min(Math.max(+el('jumpt').value, 0), sim.tf);
+    paused = true; setPauseLabel();
+    sim.trail = []; sim.marks = sim.marks.filter(m => m[2] <= target);
+    for (let tt = 0; tt < target; tt += 0.02) sim.trail.push([sim.vx * tt, sim.h0 + sim.vy0 * tt - 0.5 * sim.g * tt * tt]);
+    sim.t = target;
+    const x = sim.vx * target, y = sim.h0 + sim.vy0 * target - 0.5 * sim.g * target * target;
+    sim.trail.push([x, y]); sim.marks.push([x, y, target]);
+    if (stopAt != null) stopAt = Math.floor(target / +el('dtstep').value + 1) * +el('dtstep').value;
+    render();
+  }
+
   function togglePause() {
     if (!sim) return;
     paused = !paused; setPauseLabel();
@@ -241,6 +257,8 @@
   el('go').addEventListener('click', setup);
   el('pause').addEventListener('click', togglePause);
   el('step').addEventListener('click', stepForward);
+  el('jump').addEventListener('click', jumpTo);
+  el('jumpt').addEventListener('keydown', e => { if (e.key === 'Enter') jumpTo(); });
   el('autostop').addEventListener('change', () => { stopAt = el('autostop').checked && sim ? Math.floor(sim.t / +el('dtstep').value + 1) * +el('dtstep').value : null; });
   document.addEventListener('keydown', e => { if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); togglePause(); } });
   setup();

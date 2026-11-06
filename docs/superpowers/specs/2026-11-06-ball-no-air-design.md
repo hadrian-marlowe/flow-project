@@ -30,17 +30,22 @@ the kind that can take extra forces later.
    downward.
 4. Pause and resume. Step forward by a chosen time interval. Optionally auto-pause
    every interval. Each pause leaves a ghost marker on the path labelled with its time.
-5. Settings the student will change live at the top of the file with comments:
+5. Jump to an exact time: type a number like `1.25` into a "Jump to t" box in the
+   window, press Enter, and the ball lands precisely on that moment, paused, with the
+   numbers shown and a ghost marker left behind. (Student's addition, 2026-11-06, for
+   precise readings.)
+6. Settings the student will change live at the top of the file with comments:
    launch speed, launch angle, gravity, start height, time step size, pause interval.
-6. The motion is computed by stepping forward in tiny time slices (a real simulation),
+7. The motion is computed by stepping forward in tiny time slices (a real simulation),
    not by plugging into the closed-form parabola formulas.
-7. Tests prove the simulation is right by comparing it against the exact formulas.
+8. Tests prove the simulation is right by comparing it against the exact formulas.
 
 ## Non-goals
 
 - No air resistance, drag, wind, or spin. Those are later projects.
-- No GUI widgets (sliders, text boxes) inside the window. Settings are edited in the
-  file. Keyboard controls are enough for pause/step.
+- No sliders or settings widgets inside the window. Settings are edited in the file.
+  Keyboard controls handle pause/step. The one exception is the "Jump to t" text box
+  (goal 5), because typing an exact time is the whole point of that feature.
 - No saving videos or images.
 - No 3D.
 
@@ -82,9 +87,15 @@ the kind that can take extra forces later.
 - Pause/play on the space bar. Step forward one interval on the right arrow key.
   Auto-pause every interval is a setting at the top of the file (on by default).
 - Every pause leaves a small grey ghost circle on the path with its time underneath:
-  a space-bar pause, an auto-pause, and a step forward all leave one. (Student's
-  decision, 2026-11-06. The mockup originally skipped the space-bar case; it has been
-  fixed to match.)
+  a space-bar pause, an auto-pause, a step forward, and a jump all leave one.
+  (Student's decision, 2026-11-06. The mockup originally skipped the space-bar case;
+  it has been fixed to match.)
+- "Jump to t" box at the bottom of the window (matplotlib's `TextBox` widget). Enter
+  a time in seconds and press Enter. The ball moves to that exact moment and pauses.
+  Times past the landing clamp to the landing time; negative or non-number input is
+  ignored. The jump lands on the nearest stored physics sample, so with DT = 0.001 s
+  the readings are accurate to a thousandth of a second. Pressing space afterwards
+  resumes from there.
 
 ### Builder's calls (my choices, not the student's — flag if you disagree)
 
@@ -142,6 +153,9 @@ the kind that can take extra forces later.
   higher g → shorter range; 45° gives the longest range on flat ground).
 - Animation helpers: given a pause interval and current time, the next pause time is
   computed correctly; frame index for a given time is correct.
+- Jump to t: parsing the typed text (valid number, blank, garbage, negative, past the
+  end) gives the right target time or "ignore"; after a jump the displayed numbers
+  match the stored arrays at that time; a ghost marker is added.
 
 ## Left to the builder
 
