@@ -95,12 +95,11 @@ class FlightAnimation:
         player: Player,
         playback_speed: float = 0.5,
         title: str = "Ball with no air",
-        arrow_scale: float = 0.1,
+        arrow_scale: Optional[float] = None,
     ) -> None:
         self.flight = flight
         self.player = player
         self.playback_speed = playback_speed
-        self.arrow_scale = arrow_scale  # metres of arrow per m/s of velocity
         self._animation = None  # FuncAnimation, kept alive while the window is open
 
         self.fig, self.ax = plt.subplots(figsize=(10, 6.5))
@@ -109,6 +108,12 @@ class FlightAnimation:
 
         xmax, ymax = axis_limits(flight)
         self.xmax = xmax
+        # Arrow length in metres per m/s. By default the launch-speed arrow is
+        # 15% of the plot width so it is always easy to see.
+        if arrow_scale is None:
+            launch_speed = float(flight.speed[0])
+            arrow_scale = 0.15 * xmax / launch_speed if launch_speed > 0 else 0.1
+        self.arrow_scale = arrow_scale
         self.ax.set_xlim(0, xmax)
         self.ax.set_ylim(0, ymax)
         self.ax.set_xlabel("x (m)")
@@ -166,14 +171,16 @@ class FlightAnimation:
         self.ball.set_data([p.x], [p.y])
 
         # Velocity arrows, drawn in metres so they scale with the plot
-        self.vx_arrow.xytext = (p.x, p.y)
+        # (xyann is the arrow's tail, xy is its head)
+        self.vx_arrow.xyann = (p.x, p.y)
         self.vx_arrow.xy = (p.x + p.vx * self.arrow_scale, p.y)
-        self.vy_arrow.xytext = (p.x, p.y)
+        self.vy_arrow.xyann = (p.x, p.y)
         self.vy_arrow.xy = (p.x, p.y + p.vy * self.arrow_scale)
 
         # Labels ride next to the ball and flip to its left near the right edge
         side = label_side(p.x, self.xmax)
-        offset = 0.03 * self.xmax
+        # Push the labels past the tip of the sideways arrow so they never overlap it
+        offset = 0.03 * self.xmax + abs(p.vx) * self.arrow_scale
         label_x = p.x + offset if side == "right" else p.x - offset
         ha = "left" if side == "right" else "right"
         line = 0.06 * self.ax.get_ylim()[1]

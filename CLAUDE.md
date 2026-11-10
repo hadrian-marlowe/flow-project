@@ -22,6 +22,7 @@ Run a single test file or test directly with the venv's pytest:
 
 ## Layout
 
+- `simulations/<name>/<name>.py` — one runnable simulation per folder, settings at the top; imported as `simulations.<name>.<name>`. Shared engine code stays in `src/flow_project/`.
 - `src/flow_project/` — application code. Modules are imported as `src.flow_project.<module>`; `pytest.ini` sets `pythonpath = .` so tests and the `-m` entry point share that import root.
 - `tests/` — pytest tests, mirroring module names (`test_<module>.py`).
 - Python 3.9 is the system interpreter used by `make setup`; keep code 3.9-compatible.

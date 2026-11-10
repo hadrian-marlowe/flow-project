@@ -133,3 +133,29 @@ def test_readout_text_matches_player(anim):
     anim.on_jump("1.0")
     anim.draw_frame(0)
     assert "speed = {:.1f} m/s".format(anim.player.speed) in anim.readout_text.get_text()
+
+
+def test_velocity_arrows_start_at_the_ball(anim):
+    anim.on_jump("1.0")
+    p = anim.player
+    assert tuple(anim.vx_arrow.xyann) == pytest.approx((p.x, p.y))
+    assert tuple(anim.vx_arrow.xy) == pytest.approx((p.x + p.vx * anim.arrow_scale, p.y))
+    assert tuple(anim.vy_arrow.xyann) == pytest.approx((p.x, p.y))
+    assert tuple(anim.vy_arrow.xy) == pytest.approx((p.x, p.y + p.vy * anim.arrow_scale))
+
+
+def test_arrow_scale_auto_fits_the_plot():
+    # With no arrow_scale given, the launch-speed arrow is ~15% of the plot width
+    flight = simulate(20.0, 45.0)
+    anim2 = FlightAnimation(flight, Player(flight))
+    assert anim2.arrow_scale * flight.speed[0] == pytest.approx(0.15 * anim2.xmax)
+    anim3 = FlightAnimation(flight, Player(flight), arrow_scale=0.5)
+    assert anim3.arrow_scale == 0.5
+
+
+def test_labels_sit_beyond_the_vx_arrow_head(anim):
+    anim.on_jump("1.0")
+    p = anim.player
+    head_x = p.x + p.vx * anim.arrow_scale
+    label_x = anim.vx_text.get_position()[0]
+    assert label_x > head_x  # ball is in the left part of the plot, labels go right
