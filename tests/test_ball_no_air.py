@@ -9,10 +9,18 @@ import pytest  # noqa: E402
 from simulations.ball_no_air import ball_no_air as sim  # noqa: E402
 
 
-def test_settings_exist_with_defaults():
-    assert sim.LAUNCH_SPEED == 20.0 and sim.LAUNCH_ANGLE == 45.0 and sim.GRAVITY == 9.8
-    assert sim.DT == 0.001 and sim.FRAME_DT == 0.02 and sim.PAUSE_INTERVAL == 0.5
-    assert sim.AUTO_PAUSE is True and sim.PLAYBACK_SPEED == 0.5
+def test_settings_are_sensible():
+    # Not pinned to exact values: the whole point is that you change them.
+    # These checks catch settings that would break the run.
+    assert sim.LAUNCH_SPEED >= 0
+    assert 0 <= sim.LAUNCH_ANGLE <= 90
+    assert sim.START_HEIGHT >= 0
+    assert sim.GRAVITY > 0
+    assert 0 < sim.DT
+    assert sim.FRAME_DT > 0
+    assert sim.PLAYBACK_SPEED > 0
+    assert sim.PAUSE_INTERVAL > 0
+    assert isinstance(sim.AUTO_PAUSE, bool)
 
 
 def test_build_flight_uses_settings():

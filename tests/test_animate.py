@@ -139,23 +139,54 @@ def test_velocity_arrows_start_at_the_ball(anim):
     anim.on_jump("1.0")
     p = anim.player
     assert tuple(anim.vx_arrow.xyann) == pytest.approx((p.x, p.y))
-    assert tuple(anim.vx_arrow.xy) == pytest.approx((p.x + p.vx * anim.arrow_scale, p.y))
+    assert tuple(anim.vx_arrow.xy) == pytest.approx((p.x + p.vx * anim.arrow_scale_x, p.y))
     assert tuple(anim.vy_arrow.xyann) == pytest.approx((p.x, p.y))
-    assert tuple(anim.vy_arrow.xy) == pytest.approx((p.x, p.y + p.vy * anim.arrow_scale))
+    assert tuple(anim.vy_arrow.xy) == pytest.approx((p.x, p.y + p.vy * anim.arrow_scale_y))
 
 
 def test_arrow_scale_auto_fits_the_plot():
-    # With no arrow_scale given, the launch-speed arrow is ~15% of the plot width
+    # The fastest speed in the flight gets an arrow ARROW_FRACTION of the plot width
     flight = simulate(20.0, 45.0)
     anim2 = FlightAnimation(flight, Player(flight))
-    assert anim2.arrow_scale * flight.speed[0] == pytest.approx(0.15 * anim2.xmax)
-    anim3 = FlightAnimation(flight, Player(flight), arrow_scale=0.5)
-    assert anim3.arrow_scale == 0.5
+    assert anim2.arrow_scale_x * flight.speed.max() == pytest.approx(0.15 * anim2.xmax)
 
 
 def test_labels_sit_beyond_the_vx_arrow_head(anim):
     anim.on_jump("1.0")
     p = anim.player
-    head_x = p.x + p.vx * anim.arrow_scale
+    head_x = p.x + p.vx * anim.arrow_scale_x
     label_x = anim.vx_text.get_position()[0]
     assert label_x > head_x  # ball is in the left part of the plot, labels go right
+
+
+# --- review findings ---------------------------------------------------------
+
+
+def test_jump_box_stops_typing_so_space_works_after_enter(anim):
+    anim.textbox.begin_typing()
+    assert anim.textbox.capturekeystrokes
+    anim.on_jump("1.0")
+    assert not anim.textbox.capturekeystrokes
+    assert len(anim.player.marks) == 1  # the re-entrant submit must not jump twice
+
+
+def test_arrows_are_equal_on_screen_for_equal_velocities():
+    # at a 45° launch vx == vy, so the two arrows must have the same pixel length
+    flight = simulate(20.0, 45.0)
+    a = FlightAnimation(flight, Player(flight))
+    a.draw_frame(0)
+    to_px = a.ax.transData.transform
+    vx_len = abs(to_px(a.vx_arrow.xy)[0] - to_px(a.vx_arrow.xyann)[0])
+    vy_len = abs(to_px(a.vy_arrow.xy)[1] - to_px(a.vy_arrow.xyann)[1])
+    assert vx_len == pytest.approx(vy_len, rel=0.02)
+    assert vx_len > 20  # pixels: clearly visible
+
+
+def test_straight_up_arrow_is_visible_and_ball_is_not_on_the_edge():
+    flight = simulate(20.0, 90.0)
+    a = FlightAnimation(flight, Player(flight))
+    a.draw_frame(0)
+    ymax = a.ax.get_ylim()[1]
+    vy_len = abs(a.vy_arrow.xy[1] - a.vy_arrow.xyann[1])
+    assert vy_len >= 0.05 * ymax
+    assert a.ax.get_xlim()[0] < 0 < a.ax.get_xlim()[1]

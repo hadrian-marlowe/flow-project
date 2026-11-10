@@ -85,8 +85,12 @@ class Player:
         stop_here = self._next_stop is not None and target >= self._next_stop - _EPS
         if stop_here:
             target = self._next_stop
-        self._go_to(target)
-        if stop_here or self.finished:
+        self._go_forward_to(target)
+        if stop_here:
+            # Count the next stop from the stop we aimed at, not from where the
+            # nearest stored sample happened to land, so we never re-pause here.
+            self._pause_here(next_stop=self._next_stop + self.pause_interval)
+        elif self.finished:
             self._pause_here()
 
     def toggle_pause(self) -> None:
@@ -98,7 +102,7 @@ class Player:
 
     def step_forward(self) -> None:
         """Right arrow: jump ahead by one pause interval and pause there."""
-        self._go_to(self.t + self.pause_interval)
+        self._go_forward_to(self.t + self.pause_interval)
         self._pause_here()
 
     def jump_to(self, t: float) -> None:
@@ -112,15 +116,26 @@ class Player:
         t = max(0.0, min(t, self.flight.flight_time))
         self.index = self.flight.index_at_time(t)
 
-    def _pause_here(self) -> None:
+    def _go_forward_to(self, t: float) -> None:
+        """Like _go_to, but always moves at least one sample forward.
+
+        Needed when the physics time slice DT is bigger than the animation
+        frame: the nearest sample might be the one we are already on.
+        """
+        last = len(self.flight.t) - 1
+        self.index = min(last, max(self.flight.index_at_time(t), self.index + 1))
+
+    def _pause_here(self, next_stop: Optional[float] = None) -> None:
         self.paused = True
         mark = (self.flight.x[self.index], self.flight.y[self.index], self.flight.t[self.index])
         if not self.marks or self.marks[-1][2] != mark[2]:
             self.marks.append(mark)
-        self._update_next_stop()
+        self._update_next_stop(next_stop)
 
-    def _update_next_stop(self) -> None:
-        if self.auto_pause:
-            self._next_stop = next_pause_time(self.t, self.pause_interval)
-        else:
+    def _update_next_stop(self, next_stop: Optional[float] = None) -> None:
+        if not self.auto_pause:
             self._next_stop = None
+        elif next_stop is not None:
+            self._next_stop = next_stop
+        else:
+            self._next_stop = next_pause_time(self.t, self.pause_interval)

@@ -129,3 +129,47 @@ def test_zero_length_flight_is_finished_immediately():
     assert p.finished
     p.advance()
     assert p.index == 0
+
+
+# --- coarse time steps must still play (review finding) ---------------------
+
+
+def _play_to_end(p, max_frames=100000):
+    for _ in range(max_frames):
+        if p.finished:
+            return True
+        if p.paused:
+            p.toggle_pause()
+        p.advance()
+    return p.finished
+
+
+def test_coarse_dt_still_advances():
+    # DT bigger than FRAME_DT: the nearest sample is the current one, but the
+    # ball must still move forward one sample per frame.
+    p = Player(simulate(20.0, 45.0, dt=0.05), frame_dt=0.02, auto_pause=False)
+    p.advance()
+    assert p.index == 1
+    assert _play_to_end(p)
+
+
+def test_coarse_dt_with_auto_pause_reaches_the_end():
+    p = Player(simulate(20.0, 45.0, dt=0.03), frame_dt=0.02, pause_interval=0.25, auto_pause=True)
+    pause_times = []
+    for _ in range(100000):
+        if p.finished:
+            break
+        if p.paused:
+            pause_times.append(p.t)
+            p.toggle_pause()
+        p.advance()
+    assert p.finished
+    # every pause is strictly later than the one before: no getting stuck
+    assert all(b > a for a, b in zip(pause_times, pause_times[1:]))
+    assert len(pause_times) >= 10
+
+
+def test_step_forward_always_moves_with_coarse_dt():
+    p = Player(simulate(20.0, 45.0, dt=0.2), pause_interval=0.1, auto_pause=False)
+    p.step_forward()
+    assert p.index == 1

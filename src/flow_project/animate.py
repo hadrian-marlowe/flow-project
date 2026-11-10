@@ -79,6 +79,10 @@ VY_COLOR = "#c2491d"  # the up/down (vy) arrow
 SPEED_COLOR = "#4a3e8a"  # total speed label
 MARK_COLOR = "#8a8f98"  # ghost markers left at every pause
 
+# How long the arrows are: the fastest speed in the flight gets an arrow this
+# fraction of the plot width. Slower speeds get proportionally shorter arrows.
+ARROW_FRACTION = 0.15
+
 
 class FlightAnimation:
     """Draws a Flight as it plays back through a Player.
@@ -95,27 +99,40 @@ class FlightAnimation:
         player: Player,
         playback_speed: float = 0.5,
         title: str = "Ball with no air",
-        arrow_scale: Optional[float] = None,
+        arrow_fraction: float = ARROW_FRACTION,
     ) -> None:
         self.flight = flight
         self.player = player
         self.playback_speed = playback_speed
         self._animation = None  # FuncAnimation, kept alive while the window is open
+        self._jumping = False  # guards against the jump box firing twice
 
         self.fig, self.ax = plt.subplots(figsize=(10, 6.5))
         self.fig.subplots_adjust(bottom=0.2, right=0.78)
-        self.fig.canvas.manager.set_window_title(title) if self.fig.canvas.manager else None
+        if self.fig.canvas.manager is not None:
+            self.fig.canvas.manager.set_window_title(title)
 
         xmax, ymax = axis_limits(flight)
         self.xmax = xmax
-        # Arrow length in metres per m/s. By default the launch-speed arrow is
-        # 15% of the plot width so it is always easy to see.
-        if arrow_scale is None:
-            launch_speed = float(flight.speed[0])
-            arrow_scale = 0.15 * xmax / launch_speed if launch_speed > 0 else 0.1
-        self.arrow_scale = arrow_scale
-        self.ax.set_xlim(0, xmax)
+        if flight.range < 1e-6:
+            # Straight up or straight down: centre the ball instead of pinning
+            # it to the left edge of the plot.
+            self.ax.set_xlim(-xmax / 2, xmax / 2)
+        else:
+            self.ax.set_xlim(0, xmax)
         self.ax.set_ylim(0, ymax)
+
+        # Arrow length in metres per m/s, one scale per axis. The x and y axes
+        # are stretched differently on screen, so we correct for the shape of
+        # the plot area to make 1 m/s the same number of pixels in both
+        # directions. Then equal vx and vy really look equal.
+        box = self.ax.get_window_extent()
+        px_per_m_x = box.width / (self.ax.get_xlim()[1] - self.ax.get_xlim()[0])
+        px_per_m_y = box.height / ymax
+        fastest = max(float(flight.speed.max()), 1e-9)
+        px_per_mps = arrow_fraction * box.width / fastest  # pixels per m/s
+        self.arrow_scale_x = px_per_mps / px_per_m_x
+        self.arrow_scale_y = px_per_mps / px_per_m_y
         self.ax.set_xlabel("x (m)")
         self.ax.set_ylabel("y (m)")
         self.ax.set_title(title)
@@ -173,14 +190,14 @@ class FlightAnimation:
         # Velocity arrows, drawn in metres so they scale with the plot
         # (xyann is the arrow's tail, xy is its head)
         self.vx_arrow.xyann = (p.x, p.y)
-        self.vx_arrow.xy = (p.x + p.vx * self.arrow_scale, p.y)
+        self.vx_arrow.xy = (p.x + p.vx * self.arrow_scale_x, p.y)
         self.vy_arrow.xyann = (p.x, p.y)
-        self.vy_arrow.xy = (p.x, p.y + p.vy * self.arrow_scale)
+        self.vy_arrow.xy = (p.x, p.y + p.vy * self.arrow_scale_y)
 
         # Labels ride next to the ball and flip to its left near the right edge
         side = label_side(p.x, self.xmax)
         # Push the labels past the tip of the sideways arrow so they never overlap it
-        offset = 0.03 * self.xmax + abs(p.vx) * self.arrow_scale
+        offset = 0.03 * self.xmax + abs(p.vx) * self.arrow_scale_x
         label_x = p.x + offset if side == "right" else p.x - offset
         ha = "left" if side == "right" else "right"
         line = 0.06 * self.ax.get_ylim()[1]
@@ -231,12 +248,21 @@ class FlightAnimation:
 
     def on_jump(self, text: str) -> None:
         """Jump-box handler: go to the typed time, if it makes sense."""
-        target = parse_jump_time(text, self.flight.flight_time)
-        if target is None:
-            return
-        self.player.jump_to(target)
-        self.draw_frame(0)
-        self.fig.canvas.draw_idle()
+        if self._jumping:
+            return  # stop_typing() below re-fires submit; ignore that echo
+        self._jumping = True
+        try:
+            # Pressing Enter does not take the cursor out of the box by itself,
+            # so the next space would be typed into the box instead of pausing.
+            self.textbox.stop_typing()
+            target = parse_jump_time(text, self.flight.flight_time)
+            if target is None:
+                return
+            self.player.jump_to(target)
+            self.draw_frame(0)
+            self.fig.canvas.draw_idle()
+        finally:
+            self._jumping = False
 
     # --- run ------------------------------------------------------------
 
