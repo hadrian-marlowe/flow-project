@@ -1,0 +1,320 @@
+<title>Two-Path Launch Mockup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: a desktop window. Equation banner on top, plot left, a tidy side panel right
+     (two path columns + a collapsible World & View section), one playback bar underneath. */
+  :root {
+    --bg: #f6f4ee; --paper: #fffdf8; --fg: #1f2328; --muted: #6b6f76; --rule: #d9d4c7;
+    --a: #0b6e8e; --b: #c2491d; --speed: #4a3e8a; --mark: #8a8f98; --hi: #fff1c2;
+    --display: "Fraunces", Georgia, serif; --body: "IBM Plex Sans", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #15181c; --paper: #1d2126; --fg: #e8e6df; --muted: #9a9ea6; --rule: #343a42;
+    --a: #5bc0e0; --b: #f08a5d; --speed: #a99be8; --mark: #7d838c; --hi: #4a3f14; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --bg: #15181c; --paper: #1d2126; --fg: #e8e6df; --muted: #9a9ea6; --rule: #343a42;
+    --a: #5bc0e0; --b: #f08a5d; --speed: #a99be8; --mark: #7d838c; --hi: #4a3f14; color-scheme: dark; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--body); padding-block: 24px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
+  h1 { font-family: var(--display); font-size: 1.7rem; margin: 0; text-wrap: balance; }
+  .sub { color: var(--muted); margin: 4px 0 0; max-width: 70ch; }
+  .win { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .titlebar { font-size: .8rem; color: var(--muted); padding: 6px 12px; border-bottom: 1px solid var(--rule); display: flex; gap: 8px; align-items: center; }
+  .titlebar i { width: 10px; height: 10px; border-radius: 50%; background: var(--rule); display: inline-block; }
+
+  .eq { padding: 12px 16px; border-bottom: 1px solid var(--rule); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+  .eq .label { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .eq .math { font-family: "Times New Roman", Georgia, serif; font-size: 1.35rem; font-style: italic; }
+  .math sub, .math sup { font-size: .65em; font-style: normal; }
+  .math .n { font-family: var(--mono); font-style: normal; font-size: .9rem; padding: 1px 5px; border-radius: 4px;
+    border: 1px dashed var(--mark); cursor: pointer; }
+  .math .n:hover, .math .n.hi { background: var(--hi); border-style: solid; }
+  .eq .which { display: flex; gap: 4px; margin-left: auto; }
+  .which button { font: inherit; font-size: .8rem; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--rule); background: transparent; color: var(--fg); cursor: pointer; }
+  .which button.on-a { border-color: var(--a); color: var(--a); font-weight: 600; }
+  .which button.on-b { border-color: var(--b); color: var(--b); font-weight: 600; }
+
+  .main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; }
+  @media (max-width: 820px) { .main { grid-template-columns: 1fr; } }
+  canvas { width: 100%; max-width: 100%; aspect-ratio: 4 / 3; display: block; }
+
+  .side { border-left: 1px solid var(--rule); display: grid; align-content: start; }
+  @media (max-width: 820px) { .side { border-left: 0; border-top: 1px solid var(--rule); } }
+  details { border-bottom: 1px solid var(--rule); }
+  summary { cursor: pointer; padding: 9px 14px; font-weight: 600; font-size: .85rem; display: flex; align-items: center; gap: 8px; }
+  summary .hint { font-weight: 400; color: var(--muted); font-size: .75rem; margin-left: auto; }
+  .paths { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px 8px; padding: 4px 14px 12px; align-items: center; font-size: .8rem; }
+  .paths .h { font-weight: 600; text-align: center; padding-bottom: 2px; }
+  .paths .h.a { color: var(--a); } .paths .h.b { color: var(--b); }
+  .paths .k { color: var(--muted); font-family: var(--mono); font-size: .78rem; }
+  .paths input[type=number], .view input[type=number] { font-family: var(--mono); font-size: .85rem; width: 100%; box-sizing: border-box;
+    padding: 3px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
+  .paths input.hi { background: var(--hi); border-color: var(--fg); }
+  .paths .link { grid-column: 1 / -1; font-size: .72rem; color: var(--muted); padding-top: 2px; }
+  .derived { color: var(--muted); }
+  .view { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px 8px; padding: 4px 14px 12px; align-items: center; font-size: .8rem; }
+  .view .k { color: var(--muted); font-family: var(--mono); font-size: .78rem; }
+  .view .full { grid-column: 2 / -1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .view select, .bar select { font: inherit; font-size: .8rem; padding: 3px 6px; border-radius: 4px; border: 1px solid var(--rule); background: var(--bg); color: var(--fg); }
+  .ghost { font: inherit; font-size: .78rem; padding: 3px 9px; border-radius: 4px; border: 1px solid var(--rule); background: transparent; color: var(--fg); cursor: pointer; }
+  .chk { display: flex; align-items: center; gap: 6px; font-size: .78rem; }
+
+  .readout { padding: 8px 14px 12px; font-family: var(--mono); font-size: .78rem; font-variant-numeric: tabular-nums; }
+  .readout table { width: 100%; border-collapse: collapse; }
+  .readout th { font-weight: 600; text-align: right; padding: 2px 4px; }
+  .readout th.a { color: var(--a); } .readout th.b { color: var(--b); }
+  .readout td { text-align: right; padding: 2px 4px; border-top: 1px solid var(--rule); }
+  .readout td:first-child { text-align: left; color: var(--muted); }
+  .readout .diff td { color: var(--muted); font-size: .72rem; }
+
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 10px 14px; border-top: 1px solid var(--rule); font-size: .8rem; }
+  .bar .play { font: inherit; font-weight: 600; padding: 6px 16px; border-radius: 4px; border: 1px solid var(--a); background: var(--a); color: #fff; cursor: pointer; min-width: 84px; }
+  .bar input[type=number] { font-family: var(--mono); font-size: .85rem; width: 6ch; padding: 3px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--bg); color: var(--fg); }
+  .bar .clock { font-family: var(--mono); font-weight: 600; font-size: 1rem; margin-left: auto; }
+  .bar .pausetag { color: var(--b); font-size: .75rem; font-family: var(--mono); }
+  .scrub { width: 100%; accent-color: var(--a); margin: 0; }
+  .scrubwrap { padding: 8px 14px 0; }
+
+  .ideas { display: grid; gap: 8px; }
+  .ideas h2 { font-family: var(--display); font-size: 1.2rem; margin: 8px 0 0; }
+  .idea { display: grid; grid-template-columns: auto 1fr; gap: 10px; padding: 10px 12px; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; font-size: .9rem; }
+  .idea b { font-weight: 600; }
+  .idea .tag { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); align-self: start; padding-top: 3px; white-space: nowrap; }
+  .idea .tag.new { color: var(--b); }
+  .note { font-size: .85rem; color: var(--muted); border-left: 3px solid var(--b); padding-left: 10px; }
+  button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid var(--b); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <div>
+    <h1>Ball launch, two paths</h1>
+    <p class="sub">Mockup of the redesigned window. Everything is grouped into four areas so nothing piles up: the equation banner, the plot, the side panel, and one playback bar. Click numbers in the equation, type in the boxes, press Play.</p>
+  </div>
+
+  <div class="win">
+    <div class="titlebar"><i></i><i></i><i></i> Ball with no air</div>
+
+    <div class="eq">
+      <span class="label">Path equation</span>
+      <span class="math" id="math"></span>
+      <span class="which"><button id="eqA" class="on-a" type="button">A</button><button id="eqB" type="button">B</button></span>
+    </div>
+
+    <div class="main">
+      <div>
+        <canvas id="c" width="1120" height="840"></canvas>
+        <div class="scrubwrap"><input id="scrub" class="scrub" type="range" min="0" max="1000" value="0" aria-label="time scrubber"></div>
+        <div class="bar">
+          <button id="play" class="play" type="button">▶ Play</button>
+          <button id="step" class="ghost" type="button">Step ▸</button>
+          <label class="chk"><input id="auto" type="checkbox"> pause every <input id="interval" type="number" value="0.5" step="0.1" min="0.05"> s</label>
+          <label class="chk">jump to t <input id="jumpt" type="number" value="1.25" step="0.01" min="0"> <button id="jump" class="ghost" type="button">Go</button></label>
+          <label class="chk">speed <select id="spd"><option>0.25×</option><option selected>0.5×</option><option>1×</option></select></label>
+          <button id="clear" class="ghost" type="button">Clear markers</button>
+          <span class="clock" id="clock">t = 0.00 s</span>
+        </div>
+      </div>
+
+      <aside class="side">
+        <details open>
+          <summary>Launch <span class="hint">A vs B · space = pause</span></summary>
+          <div class="paths" id="paths">
+            <span></span><span class="h a">A <input type="checkbox" checked aria-label="show A"></span><span class="h b">B <input id="onB" type="checkbox" checked aria-label="show B"></span>
+            <span class="k">x₀ m</span><input data-p="A" data-k="x0" type="number" value="0" step="1"><input data-p="B" data-k="x0" type="number" value="0" step="1">
+            <span class="k">y₀ m</span><input data-p="A" data-k="y0" type="number" value="0" step="1"><input data-p="B" data-k="y0" type="number" value="5" step="1">
+            <span class="k">v₀ m/s</span><input data-p="A" data-k="v0" type="number" value="20" step="1"><input data-p="B" data-k="v0" type="number" value="20" step="1">
+            <span class="k">θ °</span><input data-p="A" data-k="th" type="number" value="45" step="5"><input data-p="B" data-k="th" type="number" value="30" step="5">
+            <span class="k">vₓ m/s</span><input data-p="A" data-k="vx" type="number" value="14.1" step="0.5"><input data-p="B" data-k="vx" type="number" value="17.3" step="0.5">
+            <span class="k">v_y m/s</span><input data-p="A" data-k="vy" type="number" value="14.1" step="0.5"><input data-p="B" data-k="vy" type="number" value="10.0" step="0.5">
+            <span class="link">v₀/θ and vₓ/v_y are linked: change either pair and the other updates. Changes apply on the next Play.</span>
+          </div>
+        </details>
+
+        <details>
+          <summary>World &amp; view <span class="hint">g, axes</span></summary>
+          <div class="view">
+            <span class="k">g m/s²</span><div class="full"><input id="g" type="number" value="9.8" step="0.1" style="width:8ch"> <select id="preset"><option>Earth</option><option>Moon 1.6</option><option>Mars 3.7</option><option>Jupiter 24.8</option></select></div>
+            <span class="k">x axis</span><input id="xmin" type="number" value="0" step="5" aria-label="x min"><input id="xmax" type="number" value="45" step="5" aria-label="x max">
+            <span class="k">y axis</span><input id="ymin" type="number" value="0" step="5" aria-label="y min"><input id="ymax" type="number" value="15" step="5" aria-label="y max">
+            <span></span><div class="full"><button id="fit" class="ghost" type="button">Auto-fit axes</button></div>
+            <span class="k">show</span><div class="full"><label class="chk"><input id="arrows" type="checkbox" checked> arrows</label><label class="chk"><input id="labels" type="checkbox" checked> numbers on ball</label><label class="chk"><input id="eqdot" type="checkbox" checked> equation ✕</label></div>
+          </div>
+        </details>
+
+        <details open>
+          <summary>Readout <span class="hint">live</span></summary>
+          <div class="readout">
+            <table>
+              <thead><tr><th></th><th class="a">A</th><th class="b">B</th></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </details>
+      </aside>
+    </div>
+  </div>
+
+  <div class="ideas">
+    <h2>What keeps it uncluttered, and what I'd add</h2>
+    <div class="idea"><span class="tag">layout</span><span><b>Four areas, not one pile.</b> Equation on top, plot, side panel, playback bar. The side panel is three fold-away sections: Launch (A and B as two columns so you compare at a glance), World &amp; view (g and axes, folded until needed), Readout.</span></div>
+    <div class="idea"><span class="tag">layout</span><span><b>One readout table</b> with an A column and a B column instead of two blocks of text, plus a last row for range, max height and flight time.</span></div>
+    <div class="idea"><span class="tag new">new</span><span><b>Time scrubber</b> under the plot. Drag it to any moment, like a video. The jump box stays for exact numbers.</span></div>
+    <div class="idea"><span class="tag new">new</span><span><b>Equation ✕ marker.</b> A small cross drawn where the equation says the ball should be, under the simulated ball. With no air they sit on top of each other. When you add air resistance later, you'll watch them separate. The readout shows the gap.</span></div>
+    <div class="idea"><span class="tag new">new</span><span><b>Gravity presets</b> (Earth, Moon, Mars, Jupiter) next to the g box, and a Clear markers button so ghost circles don't pile up between runs.</span></div>
+    <div class="idea"><span class="tag new">new</span><span><b>Show/hide toggles</b> for arrows and on-ball numbers, so a crowded two-path plot can be calmed with one click.</span></div>
+    <div class="idea"><span class="tag">kept</span><span>Space pauses and resumes. Every pause leaves a ghost marker with its time. Right arrow steps. Jump-to-time box. Auto-pause is now <b>off</b> by default: press Play and it just runs.</span></div>
+  </div>
+
+  <p class="note">This page is a sketch, not the Python program. The real window is built with tkinter and matplotlib and will look plainer, but the arrangement will be this one.</p>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const cv = $('c'), ctx = cv.getContext('2d'), W = cv.width, H = cv.height, PAD = 64;
+  const paths = { A: {x0:0,y0:0,v0:20,th:45}, B: {x0:0,y0:5,v0:20,th:30} };
+  let g = 9.8, sel = 'A', t = 0, playing = false, last = null, marks = [], stopAt = null, runs = null;
+  const view = { xmin:0, xmax:45, ymin:0, ymax:15 };
+
+  const deg = d => d * Math.PI / 180;
+  function vel(p) { return { vx: p.v0 * Math.cos(deg(p.th)), vy: p.v0 * Math.sin(deg(p.th)) }; }
+  function tf(p) { const {vy} = vel(p); return (vy + Math.sqrt(vy*vy + 2*g*p.y0)) / g; }
+  function pos(p, tt) { const {vx,vy} = vel(p); return { x: p.x0 + vx*tt, y: p.y0 + vy*tt - 0.5*g*tt*tt, vx, vy: vy - g*tt }; }
+
+  // --- side panel <-> state ---
+  function readBoxes() {
+    document.querySelectorAll('#paths input[data-p]').forEach(inp => {
+      const p = paths[inp.dataset.p]; if (['x0','y0','v0','th'].includes(inp.dataset.k)) p[inp.dataset.k] = +inp.value;
+    });
+    g = +$('g').value;
+    ['xmin','xmax','ymin','ymax'].forEach(k => view[k] = +$(k).value);
+  }
+  function writeBoxes() {
+    document.querySelectorAll('#paths input[data-p]').forEach(inp => {
+      const p = paths[inp.dataset.p], v = vel(p);
+      const val = inp.dataset.k === 'vx' ? v.vx : inp.dataset.k === 'vy' ? v.vy : p[inp.dataset.k];
+      if (document.activeElement !== inp) inp.value = (+val).toFixed(inp.dataset.k === 'vx' || inp.dataset.k === 'vy' ? 1 : 0).replace(/\.0$/, '');
+    });
+  }
+  // linked velocity boxes: typing vx/vy rewrites v0/θ
+  document.querySelectorAll('#paths input[data-p]').forEach(inp => inp.addEventListener('change', () => {
+    const p = paths[inp.dataset.p];
+    if (inp.dataset.k === 'vx' || inp.dataset.k === 'vy') {
+      const cur = vel(p); const vx = inp.dataset.k === 'vx' ? +inp.value : cur.vx, vy = inp.dataset.k === 'vy' ? +inp.value : cur.vy;
+      p.v0 = Math.hypot(vx, vy); p.th = Math.atan2(vy, vx) * 180 / Math.PI;
+    } else p[inp.dataset.k] = +inp.value;
+    writeBoxes(); renderMath();
+  }));
+  $('preset').addEventListener('change', e => { const m = e.target.value.match(/[\d.]+/); $('g').value = m ? m[0] : 9.8; });
+  $('eqA').addEventListener('click', () => pick('A')); $('eqB').addEventListener('click', () => pick('B'));
+  function pick(which) { sel = which; $('eqA').className = which === 'A' ? 'on-a' : ''; $('eqB').className = which === 'B' ? 'on-b' : ''; renderMath(); }
+
+  // --- equation banner with clickable numbers ---
+  function renderMath() {
+    const p = paths[sel], n = (k, v, d) => `<span class="n" data-k="${k}">${(+v).toFixed(d)}</span>`;
+    $('math').innerHTML =
+      `r&#8407;(t) = (${n('x0',p.x0,0)} + (${n('v0',p.v0,1)}·cos ${n('th',p.th,0)}°)t)<b>î</b>` +
+      ` + (${n('y0',p.y0,0)} + (${n('v0',p.v0,1)}·sin ${n('th',p.th,0)}°)t − ½·${n('g',g,1)}·t²)<b>ĵ</b>`;
+    $('math').querySelectorAll('.n').forEach(el => el.addEventListener('click', () => {
+      const k = el.dataset.k;
+      const box = k === 'g' ? $('g') : document.querySelector(`#paths input[data-p="${sel}"][data-k="${k}"]`);
+      if (k === 'g') document.querySelectorAll('details')[1].open = true;
+      document.querySelectorAll('.hi').forEach(x => x.classList.remove('hi'));
+      el.classList.add('hi'); box.classList.add('hi'); box.focus(); box.select();
+    }));
+  }
+
+  // --- playback ---
+  function launch() {
+    readBoxes(); runs = { A: tf(paths.A), B: tf(paths.B) }; t = 0; marks = []; playing = true; last = null;
+    stopAt = $('auto').checked ? +$('interval').value : null; $('play').textContent = '❚❚ Pause';
+    requestAnimationFrame(frame);
+  }
+  function maxT() { return Math.max(runs.A, $('onB').checked ? runs.B : 0); }
+  function frame(now) {
+    if (!playing) { last = null; return; }
+    if (last == null) last = now;
+    const rate = parseFloat($('spd').value), dt = Math.min((now - last) / 1000, 0.05) * rate; last = now;
+    let tn = Math.min(t + dt, maxT());
+    if (stopAt != null && tn >= stopAt - 1e-9) { tn = stopAt; pause(); stopAt += +$('interval').value; }
+    t = tn; if (t >= maxT()) { playing = false; $('play').textContent = '▶ Replay'; }
+    draw(); if (playing) requestAnimationFrame(frame);
+  }
+  function pause() { playing = false; $('play').textContent = '▶ Play'; addMark(); draw(); }
+  function addMark() { ['A','B'].forEach(k => { if (k === 'B' && !$('onB').checked) return; if (t <= runs[k]) { const q = pos(paths[k], t); marks.push([k, q.x, q.y, t]); } }); }
+  function togglePlay() { if (!runs || t >= maxT()) return launch(); if (playing) pause(); else { playing = true; last = null; $('play').textContent = '❚❚ Pause'; requestAnimationFrame(frame); } }
+  $('play').addEventListener('click', togglePlay);
+  $('step').addEventListener('click', () => { if (!runs) launch(); playing = false; t = Math.min(t + +$('interval').value, maxT()); addMark(); $('play').textContent = '▶ Play'; draw(); });
+  $('jump').addEventListener('click', () => { if (!runs) launch(); playing = false; t = Math.min(Math.max(+$('jumpt').value, 0), maxT()); addMark(); $('play').textContent = '▶ Play'; draw(); });
+  $('clear').addEventListener('click', () => { marks = []; draw(); });
+  $('scrub').addEventListener('input', e => { if (!runs) { readBoxes(); runs = { A: tf(paths.A), B: tf(paths.B) }; } playing = false; t = e.target.value / 1000 * maxT(); $('play').textContent = '▶ Play'; draw(); });
+  $('fit').addEventListener('click', () => { readBoxes(); const r = Math.max(pos(paths.A, tf(paths.A)).x, pos(paths.B, tf(paths.B)).x);
+    const hA = paths.A.y0 + vel(paths.A).vy**2/(2*g), hB = paths.B.y0 + vel(paths.B).vy**2/(2*g);
+    $('xmin').value = 0; $('xmax').value = Math.ceil(r*1.1); $('ymin').value = 0; $('ymax').value = Math.ceil(Math.max(hA,hB)*1.25); readBoxes(); draw(); });
+  ['xmin','xmax','ymin','ymax'].forEach(k => $(k).addEventListener('change', () => { readBoxes(); draw(); }));
+  document.addEventListener('keydown', e => { if (e.code === 'Space' && !['INPUT','SELECT','BUTTON'].includes(e.target.tagName)) { e.preventDefault(); togglePlay(); } });
+
+  // --- drawing ---
+  const sx = x => PAD + (x - view.xmin) / (view.xmax - view.xmin) * (W - 2*PAD);
+  const sy = y => H - PAD - (y - view.ymin) / (view.ymax - view.ymin) * (H - 2*PAD);
+  function nice(r) { const p = Math.pow(10, Math.floor(Math.log10(r))), s = r/p; return s < 2 ? p/5 : s < 5 ? p/2 : p; }
+  function draw() {
+    const fg = css('--fg'), mu = css('--muted'), rule = css('--rule'), col = { A: css('--a'), B: css('--b') }, mark = css('--mark');
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.beginPath(); ctx.rect(PAD, PAD, W-2*PAD, H-2*PAD); ctx.clip();
+    ctx.strokeStyle = rule; ctx.lineWidth = 1; ctx.font = '18px IBM Plex Mono, monospace'; ctx.fillStyle = mu;
+    const stx = nice(view.xmax - view.xmin), sty = nice(view.ymax - view.ymin);
+    for (let gx = Math.ceil(view.xmin/stx)*stx; gx <= view.xmax; gx += stx) { ctx.beginPath(); ctx.moveTo(sx(gx), PAD); ctx.lineTo(sx(gx), H-PAD); ctx.stroke(); }
+    for (let gy = Math.ceil(view.ymin/sty)*sty; gy <= view.ymax; gy += sty) { ctx.beginPath(); ctx.moveTo(PAD, sy(gy)); ctx.lineTo(W-PAD, sy(gy)); ctx.stroke(); }
+    ctx.strokeStyle = fg; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PAD, sy(0)); ctx.lineTo(W-PAD, sy(0)); ctx.stroke();
+    if (runs) {
+      const showB = $('onB').checked;
+      ['A','B'].forEach(k => {
+        if (k === 'B' && !showB) return;
+        const p = paths[k], T = Math.min(t, runs[k]);
+        ctx.strokeStyle = col[k]; ctx.setLineDash([5,6]); ctx.lineWidth = 2; ctx.beginPath();
+        for (let tt = 0; tt <= T; tt += T/120 || 1) { const q = pos(p, tt); tt ? ctx.lineTo(sx(q.x), sy(q.y)) : ctx.moveTo(sx(q.x), sy(q.y)); }
+        const q = pos(p, T); ctx.lineTo(sx(q.x), sy(q.y)); ctx.stroke(); ctx.setLineDash([]);
+        const px = sx(q.x), py = sy(q.y), kpx = 0.15 * (W-2*PAD) / 25;
+        if ($('arrows').checked) { arrow(px, py, px + q.vx*kpx, py, col[k]); arrow(px, py, px, py - q.vy*kpx, col[k]); }
+        if ($('eqdot').checked) { ctx.strokeStyle = fg; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(px-7,py-7); ctx.lineTo(px+7,py+7); ctx.moveTo(px+7,py-7); ctx.lineTo(px-7,py+7); ctx.stroke(); }
+        ctx.fillStyle = col[k]; ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI*2); ctx.fill();
+        if ($('labels').checked) {
+          ctx.font = '600 20px IBM Plex Mono, monospace'; const flip = px > W - 240; ctx.textAlign = flip ? 'right' : 'left';
+          const lx = flip ? px - 16 - Math.abs(q.vx)*kpx : px + 16 + Math.abs(q.vx)*kpx;
+          ctx.fillStyle = col[k]; ctx.fillText(`vx ${q.vx.toFixed(1)}  vy ${q.vy >= 0 ? '+' : ''}${q.vy.toFixed(1)}`, lx, py - 8);
+          ctx.fillStyle = css('--speed'); ctx.fillText(`v ${Math.hypot(q.vx,q.vy).toFixed(1)}`, lx, py + 16);
+        }
+      });
+      ctx.font = '16px IBM Plex Mono, monospace';
+      marks.forEach(([k, x, y, mt]) => { ctx.strokeStyle = mark; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(sx(x), sy(y), 8, 0, Math.PI*2); ctx.stroke(); ctx.fillStyle = mark; ctx.textAlign = 'center'; ctx.fillText(mt.toFixed(1)+'s', sx(x), sy(y) + 26); });
+    } else { ctx.fillStyle = mu; ctx.font = '22px IBM Plex Sans, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Set the boxes, then press Play (or space)', W/2, H/2); }
+    ctx.restore();
+    ctx.fillStyle = mu; ctx.font = '18px IBM Plex Mono, monospace'; ctx.textAlign = 'center';
+    for (let gx = Math.ceil(view.xmin/stx)*stx; gx <= view.xmax; gx += stx) ctx.fillText(gx.toFixed(0), sx(gx), H - PAD + 26);
+    ctx.textAlign = 'right'; for (let gy = Math.ceil(view.ymin/sty)*sty; gy <= view.ymax; gy += sty) ctx.fillText(gy.toFixed(0), PAD - 10, sy(gy) + 6);
+    ctx.textAlign = 'center'; ctx.fillText('x (m)', W/2, H - 14); ctx.save(); ctx.translate(18, H/2); ctx.rotate(-Math.PI/2); ctx.fillText('y (m)', 0, 0); ctx.restore();
+    const clock = `t = ${t.toFixed(2)} s` + (runs && !playing && t < maxT() ? '  ⏸' : '');
+    $('clock').textContent = clock; ctx.fillStyle = fg; ctx.font = '600 28px IBM Plex Mono, monospace'; ctx.textAlign = 'right'; ctx.fillText(clock, W - PAD, PAD - 18);
+    if (runs) $('scrub').value = Math.round(t / maxT() * 1000);
+    readout();
+  }
+  function arrow(x1,y1,x2,y2,c) { const dx=x2-x1, dy=y2-y1, L=Math.hypot(dx,dy); if (L<4) return; ctx.strokeStyle=c; ctx.fillStyle=c; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); const ux=dx/L, uy=dy/L; ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-11*ux+6*uy, y2-11*uy-6*ux); ctx.lineTo(x2-11*ux-6*uy, y2-11*uy+6*ux); ctx.closePath(); ctx.fill(); }
+  function readout() {
+    const f = k => { if (!runs) return null; const T = Math.min(t, runs[k]); return pos(paths[k], T); };
+    const a = f('A'), b = $('onB').checked ? f('B') : null, fmt = (q, fn, d) => q ? fn(q).toFixed(d) : '—';
+    const rows = [['x m', q=>q.x, 1], ['y m', q=>Math.max(q.y,0), 1], ['vx m/s', q=>q.vx, 1], ['vy m/s', q=>q.vy, 1], ['v m/s', q=>Math.hypot(q.vx,q.vy), 1]];
+    let html = rows.map(([n, fn, d]) => `<tr><td>${n}</td><td>${fmt(a,fn,d)}</td><td>${fmt(b,fn,d)}</td></tr>`).join('');
+    const R = k => runs ? pos(paths[k], runs[k]).x.toFixed(1) : '—', Hm = k => runs ? (paths[k].y0 + vel(paths[k]).vy**2/(2*g)).toFixed(1) : '—', Tf = k => runs ? runs[k].toFixed(2) : '—';
+    html += `<tr><td>range m</td><td>${R('A')}</td><td>${b?R('B'):'—'}</td></tr><tr><td>max h m</td><td>${Hm('A')}</td><td>${b?Hm('B'):'—'}</td></tr><tr><td>flight s</td><td>${Tf('A')}</td><td>${b?Tf('B'):'—'}</td></tr>`;
+    html += `<tr class="diff"><td>sim − eq</td><td>0.000 m</td><td>${b ? '0.000 m' : '—'}</td></tr>`;
+    $('rows').innerHTML = html;
+  }
+  writeBoxes(); renderMath(); draw();
+})();
+</script>

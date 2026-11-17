@@ -2,6 +2,7 @@ VENV := .venv
 PYTHON := $(VENV)/bin/python
 PIP := $(VENV)/bin/pip
 PYTEST := $(VENV)/bin/pytest
+SIM ?= ball_no_air
 
 .PHONY: setup test run clean
 
@@ -17,7 +18,7 @@ test: setup
 	$(PYTEST) tests
 
 run: setup
-	$(PYTHON) -m src.flow_project.main
+	$(PYTHON) -m src.flow_project.main $(SIM)
 
 clean:
 	rm -rf $(VENV) .pytest_cache

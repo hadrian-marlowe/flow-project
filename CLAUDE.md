@@ -22,6 +22,9 @@ Run a single test file or test directly with the venv's pytest:
 
 ## Layout
 
+- `simulations/final/<name>/<name>.py` — the finished version of each simulation, settings at the top; imported as `simulations.final.<name>.<name>`; `make run SIM=<name>`. Shared engine code stays in `src/flow_project/`.
+- `simulations/prototypes/<name>/` — rough drafts, frozen: each keeps its own copy of any engine code it needs and is not covered by `make test`; `make run SIM=prototypes/<name>`. Record each draft in `simulations/prototypes/README.md`.
+- A new simulation starts in `prototypes/`; it moves to `final/` once the student is happy with it and the teacher has approved it.
 - `src/flow_project/` — application code. Modules are imported as `src.flow_project.<module>`; `pytest.ini` sets `pythonpath = .` so tests and the `-m` entry point share that import root.
 - `tests/` — pytest tests, mirroring module names (`test_<module>.py`).
 - Python 3.9 is the system interpreter used by `make setup`; keep code 3.9-compatible.
